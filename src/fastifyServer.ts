@@ -37,6 +37,33 @@ server.addSchema({
   },
 });
 
+server.addSchema({
+  $id: "createBooking",
+  type: "object",
+  properties: {
+    professionalId: { type: "string" },
+    dateTime: {
+      type: "string",
+      format: "date-time",
+    },
+  },
+});
+
+server.addSchema({
+  $id: "getProfessionalSlots",
+  type: "object",
+  properties: {
+    startDate: {
+      type: "string",
+      format: "date",
+    },
+    endDate: {
+      type: "string",
+      format: "date",
+    },
+  },
+});
+
 server.put<{ Body: ProfessionalAvailability }>(
   "/professional/availabilities",
   { schema: { body: { $ref: "createProfessionalAvailability#" } } },
@@ -87,47 +114,55 @@ type createBookingRequest = {
   };
 };
 
-server.post<createBookingRequest>("/professional/availabilities/:professionalId/book-slot", async (req, res) => {
-  const dateTime = new Date(req.body.dateTime);
-  const bookSessionCommand = new BookSessionCommand(new ProfessionalAvailabilitiesProvider(), new BookingsProvider());
-  try {
-    await bookSessionCommand.execute({
-      dateTime,
-      professionalId: req.params.professionalId,
-      patientId: req.body.patientId,
-    });
-  } catch (err) {
-    if (err instanceof UnavailableBookingTime || err instanceof ConflictingBookings) {
-      res.code(400);
-      res.send({ message: "Unavailable time" });
-      return;
+server.post<createBookingRequest>(
+  "/professional/availabilities/:professionalId/book-slot",
+  { schema: { body: { $ref: "createBooking#" } } },
+  async (req, res) => {
+    const dateTime = new Date(req.body.dateTime);
+    const bookSessionCommand = new BookSessionCommand(new ProfessionalAvailabilitiesProvider(), new BookingsProvider());
+    try {
+      await bookSessionCommand.execute({
+        dateTime,
+        professionalId: req.params.professionalId,
+        patientId: req.body.patientId,
+      });
+    } catch (err) {
+      if (err instanceof UnavailableBookingTime || err instanceof ConflictingBookings) {
+        res.code(400);
+        res.send({ message: "Unavailable time" });
+        return;
+      }
+
+      if (err instanceof ProfessionalAvailabilityNotFound) {
+        res.code(400);
+        res.send({ message: "Professional not registered" });
+      }
+
+      throw err;
     }
 
-    if (err instanceof ProfessionalAvailabilityNotFound) {
-      res.code(400);
-      res.send({ message: "Professional not registered" });
-    }
-
-    throw err;
+    res.code(202);
+    res.send();
   }
-
-  res.code(202);
-  res.send();
-});
+);
 
 type getProfessionalSlots = { Params: { professionalId: string }; Querystring: { startDate: string; endDate: string } };
 
-server.get<getProfessionalSlots>("/professional/availabilities/:professionalId/slots", async (req, res) => {
-  const professionalAvailabilityProvider = new ProfessionalAvailabilitiesProvider();
-  const bookingsProvider = new BookingsProvider();
-  const slotsQuery = new SlotsQuery(professionalAvailabilityProvider, bookingsProvider);
-  const slots = await slotsQuery.fetchSlotsByPhysicianAndRange(
-    req.params.professionalId,
-    new Date(req.query.startDate),
-    new Date(req.query.endDate)
-  );
+server.get<getProfessionalSlots>(
+  "/professional/availabilities/:professionalId/slots",
+  { schema: { querystring: { $ref: "getProfessionalSlots#" } } },
+  async (req, res) => {
+    const professionalAvailabilityProvider = new ProfessionalAvailabilitiesProvider();
+    const bookingsProvider = new BookingsProvider();
+    const slotsQuery = new SlotsQuery(professionalAvailabilityProvider, bookingsProvider);
+    const slots = await slotsQuery.fetchSlotsByPhysicianAndRange(
+      req.params.professionalId,
+      new Date(req.query.startDate),
+      new Date(req.query.endDate)
+    );
 
-  res.send(slots);
-});
+    res.send(slots);
+  }
+);
 
 export { server as fastifyServer };
