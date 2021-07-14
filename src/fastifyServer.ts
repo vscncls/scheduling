@@ -26,8 +26,14 @@ server.addSchema({
         pattern: "^(SUNDAY|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY)$",
       },
     },
-    startTime: "string",
-    endTime: "string",
+    startTime: {
+      type: "string",
+      format: "time",
+    },
+    endTime: {
+      type: "string",
+      format: "time",
+    },
   },
 });
 
