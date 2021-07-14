@@ -14,13 +14,34 @@ const server = fastify({
   logger,
 });
 
-server.put<{ Body: ProfessionalAvailability }>("/professional/availabilities", async (req, res) => {
-  const professionalAvailabilitiesProvider = new ProfessionalAvailabilitiesProvider();
-  await professionalAvailabilitiesProvider.save(req.body);
-
-  res.code(202);
-  res.send();
+server.addSchema({
+  $id: "createProfessionalAvailability",
+  type: "object",
+  properties: {
+    professionalId: { type: "string" },
+    availableWeekdays: {
+      type: "array",
+      items: {
+        type: "string",
+        pattern: "^(SUNDAY|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY)$",
+      },
+    },
+    startTime: "string",
+    endTime: "string",
+  },
 });
+
+server.put<{ Body: ProfessionalAvailability }>(
+  "/professional/availabilities",
+  { schema: { body: { $ref: "createProfessionalAvailability#" } } },
+  async (req, res) => {
+    const professionalAvailabilitiesProvider = new ProfessionalAvailabilitiesProvider();
+    await professionalAvailabilitiesProvider.save(req.body);
+
+    res.code(202);
+    res.send();
+  }
+);
 
 server.get<{ Params: { professionalId: string } }>("/professional/availabilities/:professionalId", async (req, res) => {
   const professionalAvailabilitiesProvider = new ProfessionalAvailabilitiesProvider();
