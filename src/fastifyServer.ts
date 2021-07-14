@@ -1,6 +1,6 @@
 import fastify from "fastify";
-import { BookingsProvider } from "./BookingsProvider";
-import { BookSessionCommand } from "./BookSessionCommand";
+import { BookingsProvider, ConflictingBookings } from "./BookingsProvider";
+import { BookSessionCommand, UnavailableBookingTime } from "./BookSessionCommand";
 import { LoggerSingleton } from "./LoggerSingleton";
 import {
   ProfessionalAvailabilitiesProvider,
@@ -29,7 +29,7 @@ server.get<{ Params: { professionalId: string } }>("/professional/availabilities
     professionalAvailability = await professionalAvailabilitiesProvider.getByProfessionalId(req.params.professionalId);
   } catch (err) {
     if (err instanceof ProfessionalAvailabilityNotFound) {
-      res.code(204);
+      res.code(404);
       res.send({ message: "Professional availability not found" });
       return;
     }
@@ -63,12 +63,28 @@ type createBookingRequest = {
 server.post<createBookingRequest>("/professional/availabilities/:professionalId/book-slot", async (req, res) => {
   const dateTime = new Date(req.body.dateTime);
   const bookSessionCommand = new BookSessionCommand(new ProfessionalAvailabilitiesProvider(), new BookingsProvider());
-  await bookSessionCommand.execute({
-    dateTime,
-    professionalId: req.params.professionalId,
-    patientId: req.body.patientId,
-  });
+  try {
+    await bookSessionCommand.execute({
+      dateTime,
+      professionalId: req.params.professionalId,
+      patientId: req.body.patientId,
+    });
+  } catch (err) {
+    if (err instanceof UnavailableBookingTime || err instanceof ConflictingBookings) {
+      res.code(400);
+      res.send({ message: "Unavailable time" });
+      return;
+    }
 
+    if (err instanceof ProfessionalAvailabilityNotFound) {
+      res.code(400);
+      res.send({ message: "Professional not registered" });
+    }
+
+    throw err;
+  }
+
+  res.code(202);
   res.send();
 });
 
