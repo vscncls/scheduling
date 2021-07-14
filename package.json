@@ -1,0 +1,48 @@
+{
+  "name": "scheduling",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test:unit": "jest -c ./jest.unit.config.js",
+    "test:integration": "node migrate down --to 0 && node migrate up && jest -c ./jest.integration.config.js",
+    "test:e2e": "jest -c ./jest.e2e.config.js",
+    "lint": "eslint src/ && prettier -c src/",
+    "server:dev": "ts-node-dev --respawn src/fastifyServer.ts | ./node_modules/.bin/pino-pretty",
+    "server:run": "node ./dist/src/fastifyServer.js",
+    "fetch-posts": "node ./dist/src/saveHotRedditPosts.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vscncls/scheduling.git"
+  },
+  "author": "",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/vscncls/scheduling/issues"
+  },
+  "homepage": "https://github.com/vscncls/scheduling#readme",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "dotenv": "^10.0.0",
+    "fastify": "^3.18.1",
+    "slonik": "^23.8.3"
+  },
+  "devDependencies": {
+    "@slonik/migrator": "^0.8.3",
+    "@types/jest": "^26.0.24",
+    "@types/node": "^16.0.1",
+    "@types/pino": "^6.3.9",
+    "@typescript-eslint/eslint-plugin": "^4.28.2",
+    "@typescript-eslint/parser": "^4.28.2",
+    "eslint": "^7.30.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "jest": "^27.0.6",
+    "pino-pretty": "^5.1.1",
+    "prettier": "^2.3.2",
+    "ts-jest": "^27.0.3",
+    "ts-node-dev": "^1.1.8",
+    "typescript": "^4.3.5"
+  }
+}
